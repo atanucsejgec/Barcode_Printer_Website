@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSC TE244 - 2-Up Barcode Labels (38x38mm)</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <style>
+        /* ============================================================
+           MEDIA SPEC (TSC TE244, 203 DPI):
+             - 2 stamps per row, each 38mm x 38mm
+             - Horizontal gap between stamps: 3mm
+             - Total paper width : 38 + 3 + 38 = 79mm
+             - Vertical gap between rows: 3mm (printer gap sensor handles it)
+           ============================================================ */
+
+        /* ---- SCREEN STYLES ---- */
+        body { font-family: system-ui, sans-serif; background: #f4f4f5; padding: 20px; margin: 0; }
+        .settings { background: white; padding: 20px; max-width: 520px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .settings label { display: block; font-size: 13px; font-weight: 600; margin-top: 8px; color: #374151; }
+        .settings input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; }
+        .row2 { display: flex; gap: 10px; }
+        .row2 > div { flex: 1; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 12px; }
+        button:hover { background: #1d4ed8; }
+        .tip { background:#fef3c7; border-left:4px solid #f59e0b; padding:10px; font-size:12px; margin-top:10px; border-radius:4px; }
+        .tip b { color:#92400e; }
+
+        /* ---- PRINT SHEET (used on screen for preview AND on paper) ---- */
+        .preview-wrapper { background: #e5e7eb; padding: 20px; display: inline-block; border: 1px dashed #9ca3af; margin-top: 10px; }
+
+        /* Master row = physical page (79mm x 38mm). Absolute-positioned children for pixel-exact layout. */
+        #printRow {
+            position: relative;
+            width: 79mm;
+            height: 38mm;
+            background: white;
+            box-sizing: border-box;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Each 38x38 label pinned absolutely so browser can't shift it during print */
+        .single-label {
+            position: absolute;
+            top: 0;
+            width: 38mm;
+            height: 38mm;
+            box-sizing: border-box;
+            background: white;
+            border: 1px dashed #ccc;         /* preview only, removed on print */
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000;
+            overflow: hidden;
+            padding: 1mm;
+        }
+        .label-left  { left: 0; }
+        .label-right { left: 41mm; }         /* 38mm label + 3mm horizontal gap */
+
+        /* Inner rows within each label — fixed heights so nothing drifts */
+        .store-name  { font-size: 9pt;   font-weight: 800; line-height: 1;     text-align: center; height: 4mm;  margin: 0; letter-spacing: .2px; }
+        .product     { font-size: 6.5pt; line-height: 1.1;  text-align: center; height: 7mm;  margin: .3mm 0 0; overflow: hidden; }
+        .price       { font-size: 11pt;  font-weight: 800; text-align: center; height: 5mm;  margin: 0; }
+        .barcode-svg { display: block; width: 36mm; height: 11mm; margin: .3mm auto 0; }
+        .barcode-num { font-size: 7pt;  text-align: center; letter-spacing: 1px; height: 4mm; margin-top: .3mm; font-family: 'Courier New', monospace; }
+
+        /* ---- PRINT STYLES ---- */
+        @page {
+            size: 79mm 38mm;
+            margin: 0;
+        }
+
+        @media print {
+            html, body {
+                width: 79mm;
+                height: 38mm;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .settings { display: none !important; }
+            .preview-wrapper {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+                background: white !important;
+            }
+            #printRow {
+                width: 79mm;
+                height: 38mm;
+                page-break-after: always;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .single-label { border: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="settings">
+        <h2 style="margin-top:0">TSC TE244 — 2-Up Label (38×38mm)</h2>
+
+        <label>Store Name</label>
+        <input type="text" id="storeName" value="MY STORE" onkeyup="generateLabels()">
+
+        <label>Product Details</label>
+        <input type="text" id="productDetails" value="Product Name / 100g" onkeyup="generateLabels()">
+
+        <div class="row2">
+            <div>
+                <label>Price</label>
+                <input type="text" id="price" value="Rs.199.00" onkeyup="generateLabels()">
+            </div>
+            <div>
+                <label>Barcode Number</label>
+                <input type="text" id="barcodeData" value="1234567890" onkeyup="generateLabels()">
+            </div>
+        </div>
+
+        <button onclick="window.print()">🖨️ Print Labels</button>
+
+        <div class="tip">
+            <b>Print dialog — set these EVERY time (or Chrome will scale/clip):</b><br>
+            • Destination: <b>TSC TE244</b><br>
+            • Paper size: <b>Custom 79 × 38 mm</b> (or select the label size in the TSC driver)<br>
+            • Margins: <b>None</b><br>
+            • Scale: <b>100 / Default</b> — <u>NOT “Fit to page”</u><br>
+            • “More settings” → <b>Background graphics: ON</b><br>
+            • In the TSC driver → Stock → <b>Gap sensor</b>, Vertical gap = <b>3 mm</b>
+        </div>
+    </div>
+
+    <div id="printArea" class="preview-wrapper">
+        <div id="printRow">
+            <div class="single-label label-left">
+                <div class="store-name"  id="s_store1"></div>
+                <div class="product"     id="s_prod1"></div>
+                <div class="price"       id="s_price1"></div>
+                <svg class="barcode-svg" id="barcode1"></svg>
+                <div class="barcode-num" id="s_num1"></div>
+            </div>
+            <div class="single-label label-right">
+                <div class="store-name"  id="s_store2"></div>
+                <div class="product"     id="s_prod2"></div>
+                <div class="price"       id="s_price2"></div>
+                <svg class="barcode-svg" id="barcode2"></svg>
+                <div class="barcode-num" id="s_num2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateLabels() {
+            const store   = document.getElementById('storeName').value      || " ";
+            const product = document.getElementById('productDetails').value || " ";
+            const price   = document.getElementById('price').value          || " ";
+            const data    = document.getElementById('barcodeData').value    || "0000000000";
+
+            ['1','2'].forEach(i => {
+                document.getElementById('s_store'+i).textContent = store;
+                document.getElementById('s_prod'+i).textContent  = product;
+                document.getElementById('s_price'+i).textContent = price;
+                document.getElementById('s_num'+i).textContent   = data;
+            });
+
+            // CODE128, no built-in text (we render it ourselves for precise placement)
+            const barcodeOptions = {
+                format: "CODE128",
+                width: 1.4,
+                height: 34,
+                displayValue: false,
+                margin: 0
+            };
+            try {
+                JsBarcode("#barcode1", data, barcodeOptions);
+                JsBarcode("#barcode2", data, barcodeOptions);
+            } catch (e) { console.warn('Barcode error:', e); }
+        }
+        window.onload = generateLabels;
+    </script>
+</body>
+</html>

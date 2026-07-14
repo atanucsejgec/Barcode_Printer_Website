@@ -1,0 +1,3 @@
+i have a tsc te244 printer . i want to print barcode . my stamp paper total width is 76 + gaps. in 76 width there is      
+  there is 38*38 stamps presesnt. there is gaps between two stamps. Fix the code for proper printing      my current code is in index.html file. Horizontal gap between the two 38mm stamps is 3  mm. Vertical gap between rows 3  
+  mm. in barcode i want store name , product details , price , barcode and barcode number   
