@@ -9,14 +9,19 @@
         /* ============================================================
            MEDIA SPEC (TSC TE244, 203 DPI):
              - 2 stamps per row, each 38mm x 38mm
-             - Horizontal gap between stamps: 3mm
+             - Horizontal paper gap between stamps: 3mm (physical, do NOT change)
              - Total paper width : 38 + 3 + 38 = 79mm
-             - Vertical gap between rows: 3mm (printer gap sensor handles it)
+             - Vertical gap between rows: 3mm (printer gap sensor handles)
+           NOTE on "middle gap":
+             The physical gap on the paper is fixed at 3mm — the printer/roll
+             cannot be changed. To make the two barcodes LOOK further apart,
+             we shrink each barcode and increase INNER padding on each label
+             (visual gap becomes ~9mm without moving the labels).
            ============================================================ */
 
         /* ---- SCREEN STYLES ---- */
         body { font-family: system-ui, sans-serif; background: #f4f4f5; padding: 20px; margin: 0; }
-        .settings { background: white; padding: 20px; max-width: 520px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .settings { background: white; padding: 20px; max-width: 560px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
         .settings label { display: block; font-size: 13px; font-weight: 600; margin-top: 8px; color: #374151; }
         .settings input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; }
         .row2 { display: flex; gap: 10px; }
@@ -26,11 +31,11 @@
         .tip { background:#fef3c7; border-left:4px solid #f59e0b; padding:10px; font-size:12px; margin-top:10px; border-radius:4px; }
         .tip b { color:#92400e; }
 
-        /* ---- PRINT SHEET (used on screen for preview AND on paper) ---- */
         .preview-wrapper { background: #e5e7eb; padding: 20px; display: inline-block; border: 1px dashed #9ca3af; margin-top: 10px; }
+        .preview-wrapper .printRow + .printRow { margin-top: 8px; }   /* screen spacer between preview rows (ignored on print) */
 
-        /* Master row = physical page (79mm x 38mm). Absolute-positioned children for pixel-exact layout. */
-        #printRow {
+        /* Master row = physical page (79mm x 38mm). */
+        .printRow {
             position: relative;
             width: 79mm;
             height: 38mm;
@@ -41,7 +46,7 @@
             margin: 0;
         }
 
-        /* Each 38x38 label pinned absolutely so browser can't shift it during print */
+        /* Each 38x38 label pinned absolutely — no flex drift on print */
         .single-label {
             position: absolute;
             top: 0;
@@ -49,23 +54,29 @@
             height: 38mm;
             box-sizing: border-box;
             background: white;
-            border: 1px dashed #ccc;         /* preview only, removed on print */
+            border: 1px dashed #ccc;         /* preview only */
             font-family: Arial, Helvetica, sans-serif;
             color: #000;
             overflow: hidden;
-            padding: 1mm;
+            padding: 1mm 1mm;                /* base padding */
         }
-        .label-left  { left: 0; }
-        .label-right { left: 41mm; }         /* 38mm label + 3mm horizontal gap */
+        /* Extra INNER padding pushes barcode away from the middle-facing edge   */
+        .label-left  { left: 0;    padding-right: 3mm; }
+        .label-right { left: 41mm; padding-left:  3mm; }
 
-        /* Inner rows within each label — fixed heights so nothing drifts */
         .store-name  { font-size: 9pt;   font-weight: 800; line-height: 1;     text-align: center; height: 4mm;  margin: 0; letter-spacing: .2px; }
         .product     { font-size: 6.5pt; line-height: 1.1;  text-align: center; height: 7mm;  margin: .3mm 0 0; overflow: hidden; }
         .price       { font-size: 11pt;  font-weight: 800; text-align: center; height: 5mm;  margin: 0; }
-        .barcode-svg { display: block; width: 36mm; height: 11mm; margin: .3mm auto 0; }
+        .barcode-svg { display: block; width: 32mm; height: 11mm; margin: .3mm auto 0; }  /* narrower barcode */
         .barcode-num { font-size: 7pt;  text-align: center; letter-spacing: 1px; height: 4mm; margin-top: .3mm; font-family: 'Courier New', monospace; }
 
-        /* ---- PRINT STYLES ---- */
+        /* ---- PRINT STYLES ----
+           Gap-sensor mode (Die-Cut Labels in TSC driver):
+           @page height = LABEL only = 38 mm. The 3mm physical gap is handled
+           by the printer's gap sensor (driver Stock: Height 38, Gap 3).
+           Do NOT include the gap in the CSS page height here — the sensor
+           will advance across the gap on its own between pages.
+        */
         @page {
             size: 79mm 38mm;
             margin: 0;
@@ -74,7 +85,7 @@
         @media print {
             html, body {
                 width: 79mm;
-                height: 38mm;
+                /* NO height here — that was causing the misalignment/half-print on multi-copy */
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white;
@@ -88,15 +99,33 @@
                 margin: 0 !important;
                 border: none !important;
                 background: white !important;
+                width: 79mm !important;
             }
-            #printRow {
+            .preview-wrapper .printRow + .printRow { margin-top: 0 !important; }
+
+            .printRow {
+                position: relative;
                 width: 79mm;
-                height: 38mm;
-                page-break-after: always;
+                height: 38mm;               /* match @page exactly — gap-sensor mode, driver handles the 3mm gap */
+                overflow: hidden;
+                margin: 0 !important;
+                padding: 0 !important;
                 page-break-inside: avoid;
                 break-inside: avoid;
+                /* NO page-break-after — that adds a trailing blank label */
             }
-            .single-label { border: none !important; }
+            /* Labels sit at top:0 of the row; bottom 3mm of each page falls in the physical gap */
+            .single-label {
+                position: absolute;
+                top: 0;
+                height: 38mm;
+                border: none !important;
+            }
+            /* Force new page ONLY before rows 2..N. No break after the last row. */
+            .printRow + .printRow {
+                page-break-before: always;
+                break-before: page;
+            }
         }
     </style>
 </head>
@@ -122,65 +151,101 @@
             </div>
         </div>
 
-        <button onclick="window.print()">🖨️ Print Labels</button>
+        <label>Number of Copies (each copy = 1 row of 2 stamps)</label>
+        <input type="number" id="copies" value="1" min="1" max="200" onchange="generateLabels()" onkeyup="generateLabels()">
+
+        <button onclick="printNow()">🖨️ Print Labels</button>
 
         <div class="tip">
-            <b>Print dialog — set these EVERY time (or Chrome will scale/clip):</b><br>
+            <b style="color:#92400e">Gap-sensor mode: page size is 79 × 38 mm (label only). The 3mm gap between rows is handled by the printer's gap sensor, NOT by the HTML.</b><br><br>
+
+            <b>1) Chrome print dialog:</b><br>
             • Destination: <b>TSC TE244</b><br>
-            • Paper size: <b>Custom 79 × 38 mm</b> (or select the label size in the TSC driver)<br>
-            • Margins: <b>None</b><br>
-            • Scale: <b>100 / Default</b> — <u>NOT “Fit to page”</u><br>
-            • “More settings” → <b>Background graphics: ON</b><br>
-            • In the TSC driver → Stock → <b>Gap sensor</b>, Vertical gap = <b>3 mm</b>
+            • Paper size: <b>Barcode79x41</b> (the stock you created in the driver)<br>
+            • Margins: <b>None</b> &nbsp;•&nbsp; Scale: <b>Default (100)</b> — <u>NOT Fit to page</u><br>
+            • Copies: <b>1</b> (copies are already built into the document)<br>
+            • More settings → <b>Background graphics: ON</b>, <b>Headers and footers: OFF</b><br><br>
+
+            <b>2) TSC driver (Devices &amp; Printers → TSC TE244 → Printing Preferences):</b><br>
+            • <b>Stock</b> tab (the one you're looking at):<br>
+            &nbsp;&nbsp;&nbsp; Name <b>Barcode79x41</b>, Type <b>Die-Cut Labels</b>,<br>
+            &nbsp;&nbsp;&nbsp; Width <b>79 mm</b>, Height <b>38 mm</b> &nbsp;<i>(← was 41, change to 38)</i>,<br>
+            &nbsp;&nbsp;&nbsp; Exposed Liner: Left <b>1.3 mm</b>, Right <b>1.3 mm</b>.<br>
+            • <b>Media Settings</b> (or similar tab) → set <b>Vertical Gap: 3 mm</b>, Sensor <b>Gap</b>, Post-Print Action <b>None</b>.<br>
+            • <b>Options</b> tab → Speed <b>2 ips</b>, Darkness <b>8–10</b>.<br><br>
+
+            <b>3) One-time calibration (do after loading a fresh roll):</b><br>
+            Power OFF → hold <b>FEED</b> → power ON → release when it feeds 2–3 labels. Before every print job, tap <b>FEED</b> once so the roll is parked at a label start.
         </div>
     </div>
 
     <div id="printArea" class="preview-wrapper">
-        <div id="printRow">
-            <div class="single-label label-left">
-                <div class="store-name"  id="s_store1"></div>
-                <div class="product"     id="s_prod1"></div>
-                <div class="price"       id="s_price1"></div>
-                <svg class="barcode-svg" id="barcode1"></svg>
-                <div class="barcode-num" id="s_num1"></div>
-            </div>
-            <div class="single-label label-right">
-                <div class="store-name"  id="s_store2"></div>
-                <div class="product"     id="s_prod2"></div>
-                <div class="price"       id="s_price2"></div>
-                <svg class="barcode-svg" id="barcode2"></svg>
-                <div class="barcode-num" id="s_num2"></div>
-            </div>
-        </div>
+        <!-- Rows are generated by JS -->
     </div>
 
     <script>
+        function buildLabelHTML() {
+            return `
+                <div class="single-label label-left">
+                    <div class="store-name"></div>
+                    <div class="product"></div>
+                    <div class="price"></div>
+                    <svg class="barcode-svg"></svg>
+                    <div class="barcode-num"></div>
+                </div>
+                <div class="single-label label-right">
+                    <div class="store-name"></div>
+                    <div class="product"></div>
+                    <div class="price"></div>
+                    <svg class="barcode-svg"></svg>
+                    <div class="barcode-num"></div>
+                </div>`;
+        }
+
         function generateLabels() {
             const store   = document.getElementById('storeName').value      || " ";
             const product = document.getElementById('productDetails').value || " ";
             const price   = document.getElementById('price').value          || " ";
             const data    = document.getElementById('barcodeData').value    || "0000000000";
+            let copies    = parseInt(document.getElementById('copies').value, 10);
+            if (isNaN(copies) || copies < 1) copies = 1;
+            if (copies > 200) copies = 200;
 
-            ['1','2'].forEach(i => {
-                document.getElementById('s_store'+i).textContent = store;
-                document.getElementById('s_prod'+i).textContent  = product;
-                document.getElementById('s_price'+i).textContent = price;
-                document.getElementById('s_num'+i).textContent   = data;
-            });
+            const area = document.getElementById('printArea');
 
-            // CODE128, no built-in text (we render it ourselves for precise placement)
+            // Build exactly `copies` rows
+            let html = '';
+            for (let i = 0; i < copies; i++) html += `<div class="printRow">${buildLabelHTML()}</div>`;
+            area.innerHTML = html;
+
+            // Fill text + barcode for every label
             const barcodeOptions = {
                 format: "CODE128",
-                width: 1.4,
-                height: 34,
+                width: 1.3,
+                height: 32,
                 displayValue: false,
                 margin: 0
             };
-            try {
-                JsBarcode("#barcode1", data, barcodeOptions);
-                JsBarcode("#barcode2", data, barcodeOptions);
-            } catch (e) { console.warn('Barcode error:', e); }
+            const rows = area.querySelectorAll('.printRow');
+            rows.forEach(row => {
+                row.querySelectorAll('.single-label').forEach(lbl => {
+                    lbl.querySelector('.store-name').textContent  = store;
+                    lbl.querySelector('.product').textContent     = product;
+                    lbl.querySelector('.price').textContent       = price;
+                    lbl.querySelector('.barcode-num').textContent = data;
+                    try { JsBarcode(lbl.querySelector('.barcode-svg'), data, barcodeOptions); }
+                    catch (e) { console.warn('Barcode error:', e); }
+                });
+            });
         }
+
+        function printNow() {
+            // Regenerate right before printing (in case user edited fields fast)
+            generateLabels();
+            // Small delay so SVGs finish laying out before the print engine snapshots
+            setTimeout(() => window.print(), 50);
+        }
+
         window.onload = generateLabels;
     </script>
 </body>

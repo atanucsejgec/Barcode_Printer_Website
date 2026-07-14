@@ -1,3 +1,23 @@
 i have a tsc te244 printer . i want to print barcode . my stamp paper total width is 76 + gaps. in 76 width there is      
   there is 38*38 stamps presesnt. there is gaps between two stamps. Fix the code for proper printing      my current code is in index.html file. Horizontal gap between the two 38mm stamps is 3  mm. Vertical gap between rows 3  
   mm. in barcode i want store name , product details , price , barcode and barcode number   
+
+
+  it perfectly working . now there is a problem if i going to print a barcode 3 copy ( toltal 6 barcodes ),  
+  then at first it print half print a barcode copy then give error signal on printer then when i click the   
+  printer button then it gives 1 half print copy and 3 perfect copy (total 8 stamps).fix 2 : in the right    
+  stamp the barcode comes at the edge . i think we need to increase the middle gap of the stamps 
+
+  see the print.jpeg and fix the problem . in Number of Copies i give 2 . and it print out 1 half print . 2  
+  perfect print and 1 blank print                                                                            
+                                   
+
+see the print2.jpeg. it now again print a half print. my printer name is TSC TE 244 . 
+
+Now make a readme file where if any new user going to print for first time then which setting need to change 
+
+
+How to increase the print quality? is there any setting needed to      
+  change ? Update the Readme.md file according to the print preferance tabs  
+
+  Now make the barcode professional for market stander. Add new details if needed 
