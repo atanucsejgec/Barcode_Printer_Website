@@ -88,7 +88,7 @@ Before every print job, tap **FEED** once to park the roll at the start of a fre
 ## 4. Print from the browser
 
 1. Open `index.html` in **Google Chrome** (Edge also works).
-2. Fill in: Store Name, Product Details, Price, Barcode Number, Number of Copies.
+2. Fill in the form (see section 6 below for what each field means).
    - **Copies = number of rows.** Each row prints 2 stamps. So `Copies = 3` → 6 stamps.
 3. Click **🖨️ Print Labels**.
 
@@ -132,17 +132,17 @@ Faster speeds = less time for the printhead to fully darken each dot. Only raise
 Cheap rolls fade to grey, print unevenly, and darken over time on the shelf. Look for **top-coated direct thermal** stock. Store rolls cool, dark, and sealed — heat & sunlight pre-darken the paper before you even print.
 
 ### F. Increase barcode bar width in the HTML
-In `index.html`, find the `barcodeOptions` object (near line 221):
+In `index.html`, find the `barcodeOptions` object inside `generateLabels()`:
 ```js
 const barcodeOptions = {
-    format: "CODE128",
-    width: 1.3,        // ← try 2.0 for thicker, more scan-reliable bars
+    format,
+    width: (format === "EAN13" || format === "UPC") ? 1.15 : 1.35,  // ← module width in px
     height: 32,        // ← try 40 for taller bars
     displayValue: false,
     margin: 0
 };
 ```
-If you raise `width` to 2.0, also reduce `.barcode-svg { width: 32mm; }` in the CSS to `28mm` so it still fits.
+Raising `width` makes each bar thicker and easier to scan, but at some point the barcode overflows the 32mm SVG box. If you push it up, also reduce `.barcode-svg { width: 32mm; }` in the CSS to `28mm` so it still fits.
 
 ### G. Keep text bold and at least 6pt
 At 203 DPI the printhead can't resolve thin fonts under 6pt. Bold weights (700+) always print cleaner than regular weights at small sizes.
@@ -187,6 +187,40 @@ The 3mm horizontal gap between stamps on each row is physical (roll can't change
 ### Printer keeps beeping / red LED
 - Roll loaded crooked or empty.
 - Re-calibrate (step 3).
+
+---
+
+## 6. Market-standard label fields
+
+The generator produces a retail-grade label with all fields required for packaged consumer goods sold in India (and compatible with most global retail formats). Every field is optional in the sense that empty ones just print blank — but for a compliant label you should fill all of them.
+
+### Label fields
+
+| Field | What it is | Example |
+|---|---|---|
+| **Store Name** | Your brand or shop name. Prints bold at the top. | `MY STORE` |
+| **Product Name** | Full product description. Up to 2 lines. | `Premium Basmati Rice` |
+| **Net Weight / Qty** | Net contents in g / kg / ml / L / pcs. Legally required for packaged goods. | `100 g`, `1 kg`, `500 ml`, `12 pcs` |
+| **MRP** | Maximum Retail Price, inclusive of all taxes. The `₹` symbol is safe on the TE244. | `₹199.00` |
+| **Batch / Lot No.** | Traceability code so a batch can be recalled if needed. Keep it short (6–8 chars). | `B2607A` |
+| **Packed / Mfg Date** | Month/year of packing or manufacture. | `07/2026` |
+| **Best Before / Use By** | Shelf life expressed as an absolute date OR a duration from packing. | `07/2027` or `6 months from packing` |
+| **Barcode Format** | See table below. Pick the standard your point-of-sale expects. | `CODE128` |
+| **Barcode Data** | The number or text encoded in the bars. | `1234567890` |
+
+### Barcode format guide
+
+| Format | Use it when | Data rules |
+|---|---|---|
+| **EAN-13** | You sell products with a globally-registered GTIN and expect them to be scanned at any retail POS worldwide. **The retail standard outside North America.** | Exactly **12 digits** (app auto-computes the 13th checksum) or **13 digits** (uses as-is). Non-digits are stripped. |
+| **UPC-A** | Same as EAN-13 but you're selling into US / Canadian retail. | **11 digits** (checksum auto-added) or **12 digits**. |
+| **CODE128** | In-store SKU, internal inventory tag, or any alphanumeric code. Very compact, very reliable, no registration needed. **Default choice for shop-generated tags.** | Any ASCII text. |
+| **CODE39** | You need to interoperate with older warehouse / industrial scanners that don't understand CODE128. | Uppercase letters, digits, and `- . $ / + % SPACE`. Lowercase is auto-uppercased. |
+
+If you pick EAN-13 or UPC-A and the data isn't the right length, the app **automatically falls back to CODE128** and shows a warning below the format picker so nothing prints wrong.
+
+### GTIN / EAN registration
+Real EAN-13 numbers must be issued by GS1 (gs1india.org in India, gs1us.org in the US, etc.) — you can't invent them. If you make up an EAN-13, it will still scan, but it may collide with someone else's product at a POS. For in-store use with your own scanner, **use CODE128** and don't worry about registration.
 
 ---
 

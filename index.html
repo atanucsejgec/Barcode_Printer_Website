@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSC TE244 - 2-Up Barcode Labels (38x38mm)</title>
+    <title>TSC TE244 - 2-Up Retail Barcode Labels (38x38mm)</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
     <style>
         /* ============================================================
@@ -21,15 +21,20 @@
 
         /* ---- SCREEN STYLES ---- */
         body { font-family: system-ui, sans-serif; background: #f4f4f5; padding: 20px; margin: 0; }
-        .settings { background: white; padding: 20px; max-width: 560px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .settings { background: white; padding: 20px; max-width: 640px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .settings h2 { margin-top: 0; }
         .settings label { display: block; font-size: 13px; font-weight: 600; margin-top: 8px; color: #374151; }
-        .settings input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; }
+        .settings input, .settings select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; font-size: 14px; }
         .row2 { display: flex; gap: 10px; }
         .row2 > div { flex: 1; }
-        button { background: #2563eb; color: white; border: none; padding: 12px 24px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 12px; }
+        .row3 { display: flex; gap: 10px; }
+        .row3 > div { flex: 1; }
+        .section-title { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb; }
+        button { background: #2563eb; color: white; border: none; padding: 12px 24px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 16px; font-size: 14px; }
         button:hover { background: #1d4ed8; }
-        .tip { background:#fef3c7; border-left:4px solid #f59e0b; padding:10px; font-size:12px; margin-top:10px; border-radius:4px; }
+        .tip { background:#fef3c7; border-left:4px solid #f59e0b; padding:10px; font-size:12px; margin-top:14px; border-radius:4px; }
         .tip b { color:#92400e; }
+        .barcode-warn { font-size: 11px; color: #b45309; margin-top: 4px; min-height: 14px; }
 
         .preview-wrapper { background: #e5e7eb; padding: 20px; display: inline-block; border: 1px dashed #9ca3af; margin-top: 10px; }
         .preview-wrapper .printRow + .printRow { margin-top: 8px; }   /* screen spacer between preview rows (ignored on print) */
@@ -60,15 +65,42 @@
             overflow: hidden;
             padding: 1mm 1mm;                /* base padding */
         }
-        /* Extra INNER padding pushes barcode away from the middle-facing edge   */
+        /* Extra INNER padding pushes barcode/text away from the middle-facing edge */
         .label-left  { left: 0;    padding-right: 3mm; }
         .label-right { left: 41mm; padding-left:  3mm; }
 
-        .store-name  { font-size: 9pt;   font-weight: 800; line-height: 1;     text-align: center; height: 4mm;  margin: 0; letter-spacing: .2px; }
-        .product     { font-size: 6.5pt; line-height: 1.1;  text-align: center; height: 7mm;  margin: .3mm 0 0; overflow: hidden; }
-        .price       { font-size: 11pt;  font-weight: 800; text-align: center; height: 5mm;  margin: 0; }
-        .barcode-svg { display: block; width: 32mm; height: 11mm; margin: .3mm auto 0; }  /* narrower barcode */
-        .barcode-num { font-size: 7pt;  text-align: center; letter-spacing: 1px; height: 4mm; margin-top: .3mm; font-family: 'Courier New', monospace; }
+        /* ---- RETAIL LABEL LAYOUT (market-standard) ----
+           Vertical stack inside a 38mm-tall label:
+             store-name    : 3.2mm  (brand header)
+             product       : 4.6mm  (up to 2 lines, .product-2 flag)
+             wt-mrp row    : 3.6mm  (Net Wt. | MRP)
+             batch-date row: 3.0mm  (Batch  | Pkd)
+             best-before   : 3.0mm  (Best Before / Use By)
+             barcode svg   : 10mm
+             barcode-num   : 3.2mm
+             ------------
+             ~30.6mm + 2mm padding + spacing = fits in 36mm usable area
+        */
+        .store-name  { font-size: 8.5pt; font-weight: 800; line-height: 1; text-align: center; height: 3.2mm; margin: 0; letter-spacing: .3px; text-transform: uppercase; }
+        .product     { font-size: 6.2pt; line-height: 1.05; text-align: center; height: 4.6mm; margin: .3mm 0 0; overflow: hidden; font-weight: 600; }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 5.8pt;
+            line-height: 1;
+            margin-top: .4mm;
+            height: 3mm;
+        }
+        .info-row .lbl { font-weight: 400; }
+        .info-row .val { font-weight: 700; }
+        .info-mrp     { height: 3.6mm; }
+        .info-mrp .val-mrp { font-size: 8pt; font-weight: 800; }
+        .info-center  { justify-content: center; }
+        .info-center .lbl { margin-right: 2px; }
+
+        .barcode-svg { display: block; width: 32mm; height: 10mm; margin: .5mm auto 0; }
+        .barcode-num { font-size: 6.5pt; text-align: center; letter-spacing: 1px; height: 3.2mm; margin-top: .2mm; font-family: 'Courier New', monospace; font-weight: 700; }
 
         /* ---- PRINT STYLES ----
            Gap-sensor mode (Die-Cut Labels in TSC driver):
@@ -132,24 +164,62 @@
 <body>
 
     <div class="settings">
-        <h2 style="margin-top:0">TSC TE244 — 2-Up Label (38×38mm)</h2>
+        <h2>TSC TE244 — 2-Up Retail Label (38×38mm)</h2>
+
+        <div class="section-title">Store / Product</div>
 
         <label>Store Name</label>
-        <input type="text" id="storeName" value="MY STORE" onkeyup="generateLabels()">
+        <input type="text" id="storeName" value="MY STORE" onkeyup="generateLabels()" maxlength="24">
 
-        <label>Product Details</label>
-        <input type="text" id="productDetails" value="Product Name / 100g" onkeyup="generateLabels()">
+        <label>Product Name</label>
+        <input type="text" id="productDetails" value="Premium Basmati Rice" onkeyup="generateLabels()" maxlength="48">
 
         <div class="row2">
             <div>
-                <label>Price</label>
-                <input type="text" id="price" value="Rs.199.00" onkeyup="generateLabels()">
+                <label>Net Weight / Qty</label>
+                <input type="text" id="netWeight" value="100 g" onkeyup="generateLabels()" maxlength="12">
             </div>
             <div>
-                <label>Barcode Number</label>
+                <label>MRP (incl. of all taxes)</label>
+                <input type="text" id="mrp" value="₹199.00" onkeyup="generateLabels()" maxlength="12">
+            </div>
+        </div>
+
+        <div class="row2">
+            <div>
+                <label>Batch / Lot No.</label>
+                <input type="text" id="batchNo" value="B2607A" onkeyup="generateLabels()" maxlength="10">
+            </div>
+            <div>
+                <label>Packed / Mfg Date</label>
+                <input type="text" id="packDate" value="07/2026" onkeyup="generateLabels()" maxlength="10">
+            </div>
+        </div>
+
+        <label>Best Before / Use By</label>
+        <input type="text" id="bestBefore" value="6 months from packing" onkeyup="generateLabels()" maxlength="32">
+
+        <div class="section-title">Barcode</div>
+
+        <div class="row2">
+            <div>
+                <label>Barcode Format</label>
+                <select id="barcodeFormat" onchange="generateLabels()">
+                    <option value="EAN13">EAN-13 (retail — 12 or 13 digits)</option>
+                    <option value="UPC">UPC-A (retail US — 11 or 12 digits)</option>
+                    <option value="CODE128" selected>CODE128 (any text — general use)</option>
+                    <option value="CODE39">CODE39 (industrial — uppercase/digits)</option>
+                </select>
+            </div>
+            <div>
+                <label>Barcode Data</label>
                 <input type="text" id="barcodeData" value="1234567890" onkeyup="generateLabels()">
             </div>
         </div>
+
+        <div id="barcodeWarn" class="barcode-warn"></div>
+
+        <div class="section-title">Print</div>
 
         <label>Number of Copies (each copy = 1 row of 2 stamps)</label>
         <input type="number" id="copies" value="1" min="1" max="200" onchange="generateLabels()" onkeyup="generateLabels()">
@@ -167,15 +237,14 @@
             • More settings → <b>Background graphics: ON</b>, <b>Headers and footers: OFF</b><br><br>
 
             <b>2) TSC driver (Devices &amp; Printers → TSC TE244 → Printing Preferences):</b><br>
-            • <b>Stock</b> tab (the one you're looking at):<br>
-            &nbsp;&nbsp;&nbsp; Name <b>Barcode79x41</b>, Type <b>Die-Cut Labels</b>,<br>
-            &nbsp;&nbsp;&nbsp; Width <b>79 mm</b>, Height <b>38 mm</b> &nbsp;<i>(← was 41, change to 38)</i>,<br>
-            &nbsp;&nbsp;&nbsp; Exposed Liner: Left <b>1.3 mm</b>, Right <b>1.3 mm</b>.<br>
-            • <b>Media Settings</b> (or similar tab) → set <b>Vertical Gap: 3 mm</b>, Sensor <b>Gap</b>, Post-Print Action <b>None</b>.<br>
-            • <b>Options</b> tab → Speed <b>2 ips</b>, Darkness <b>8–10</b>.<br><br>
+            • <b>Stock</b> tab: Name <b>Barcode79x41</b>, Type <b>Die-Cut Labels</b>, Width <b>79 mm</b>, Height <b>38 mm</b>, Exposed Liner L/R <b>1.3 mm</b>.<br>
+            • <b>Media Settings</b>: Vertical Gap <b>3 mm</b>, Sensor <b>Gap</b>, Post-Print <b>None</b>.<br>
+            • <b>Options</b>: Speed <b>2 ips</b>, Darkness <b>10–12</b>.<br><br>
 
-            <b>3) One-time calibration (do after loading a fresh roll):</b><br>
-            Power OFF → hold <b>FEED</b> → power ON → release when it feeds 2–3 labels. Before every print job, tap <b>FEED</b> once so the roll is parked at a label start.
+            <b>3) One-time calibration (after loading a fresh roll):</b><br>
+            Power OFF → hold <b>FEED</b> → power ON → release when it feeds 2–3 labels. Before every print job, tap <b>FEED</b> once so the roll is parked at a label start.<br><br>
+
+            <b>Barcode formats:</b> EAN-13 / UPC-A are the retail standards scanned at every POS worldwide — use them if your products have GTINs. CODE128 accepts any text and is fine for in-store SKUs. See <b>README.md § 6</b> for details.
         </div>
     </div>
 
@@ -184,32 +253,103 @@
     </div>
 
     <script>
+        // ---- Barcode format helpers --------------------------------------------------
+        // EAN-13 needs 12 digits + 1 checksum. If user gives 12 we compute the 13th.
+        // UPC-A needs 11 digits + 1 checksum. If user gives 11 we compute the 12th.
+        // CODE128 / CODE39 accept any text (CODE39 uppercases internally).
+        function ean13Checksum(twelve) {
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                const d = parseInt(twelve[i], 10);
+                sum += (i % 2 === 0) ? d : d * 3;
+            }
+            return (10 - (sum % 10)) % 10;
+        }
+        function upcaChecksum(eleven) {
+            let sum = 0;
+            for (let i = 0; i < 11; i++) {
+                const d = parseInt(eleven[i], 10);
+                sum += (i % 2 === 0) ? d * 3 : d;
+            }
+            return (10 - (sum % 10)) % 10;
+        }
+
+        function normalizeBarcodeData(format, raw) {
+            const warn = [];
+            let data = (raw || "").trim();
+
+            if (format === "EAN13") {
+                const digits = data.replace(/\D/g, "");
+                if (digits.length === 12)      data = digits + ean13Checksum(digits);
+                else if (digits.length === 13) data = digits;
+                else { warn.push("EAN-13 needs 12 or 13 digits — falling back to CODE128."); return { data: raw, format: "CODE128", warn }; }
+            } else if (format === "UPC") {
+                const digits = data.replace(/\D/g, "");
+                if (digits.length === 11)      data = digits + upcaChecksum(digits);
+                else if (digits.length === 12) data = digits;
+                else { warn.push("UPC-A needs 11 or 12 digits — falling back to CODE128."); return { data: raw, format: "CODE128", warn }; }
+            } else if (format === "CODE39") {
+                data = data.toUpperCase();
+            } else if (!data) {
+                data = "0000000000";
+            }
+            return { data, format, warn };
+        }
+
         function buildLabelHTML() {
             return `
                 <div class="single-label label-left">
                     <div class="store-name"></div>
                     <div class="product"></div>
-                    <div class="price"></div>
+                    <div class="info-row info-mrp">
+                        <span><span class="lbl">Net Wt:</span> <span class="val net-wt-val"></span></span>
+                        <span><span class="lbl">MRP</span> <span class="val val-mrp mrp-val"></span></span>
+                    </div>
+                    <div class="info-row">
+                        <span><span class="lbl">Batch:</span> <span class="val batch-val"></span></span>
+                        <span><span class="lbl">Pkd:</span> <span class="val pkd-val"></span></span>
+                    </div>
+                    <div class="info-row info-center">
+                        <span class="lbl">Best Before:</span> <span class="val bb-val"></span>
+                    </div>
                     <svg class="barcode-svg"></svg>
                     <div class="barcode-num"></div>
                 </div>
                 <div class="single-label label-right">
                     <div class="store-name"></div>
                     <div class="product"></div>
-                    <div class="price"></div>
+                    <div class="info-row info-mrp">
+                        <span><span class="lbl">Net Wt:</span> <span class="val net-wt-val"></span></span>
+                        <span><span class="lbl">MRP</span> <span class="val val-mrp mrp-val"></span></span>
+                    </div>
+                    <div class="info-row">
+                        <span><span class="lbl">Batch:</span> <span class="val batch-val"></span></span>
+                        <span><span class="lbl">Pkd:</span> <span class="val pkd-val"></span></span>
+                    </div>
+                    <div class="info-row info-center">
+                        <span class="lbl">Best Before:</span> <span class="val bb-val"></span>
+                    </div>
                     <svg class="barcode-svg"></svg>
                     <div class="barcode-num"></div>
                 </div>`;
         }
 
         function generateLabels() {
-            const store   = document.getElementById('storeName').value      || " ";
-            const product = document.getElementById('productDetails').value || " ";
-            const price   = document.getElementById('price').value          || " ";
-            const data    = document.getElementById('barcodeData').value    || "0000000000";
-            let copies    = parseInt(document.getElementById('copies').value, 10);
+            const store    = document.getElementById('storeName').value      || " ";
+            const product  = document.getElementById('productDetails').value || " ";
+            const netWt    = document.getElementById('netWeight').value      || "—";
+            const mrp      = document.getElementById('mrp').value            || "—";
+            const batch    = document.getElementById('batchNo').value        || "—";
+            const pkd      = document.getElementById('packDate').value       || "—";
+            const bb       = document.getElementById('bestBefore').value     || "—";
+            const rawData  = document.getElementById('barcodeData').value    || "0000000000";
+            const rawFmt   = document.getElementById('barcodeFormat').value  || "CODE128";
+            let copies     = parseInt(document.getElementById('copies').value, 10);
             if (isNaN(copies) || copies < 1) copies = 1;
             if (copies > 200) copies = 200;
+
+            const { data, format, warn } = normalizeBarcodeData(rawFmt, rawData);
+            document.getElementById('barcodeWarn').textContent = warn.join(" ");
 
             const area = document.getElementById('printArea');
 
@@ -218,20 +358,30 @@
             for (let i = 0; i < copies; i++) html += `<div class="printRow">${buildLabelHTML()}</div>`;
             area.innerHTML = html;
 
-            // Fill text + barcode for every label
+            // Barcode rendering options — module width tuned for 32mm SVG at 203 DPI.
+            // EAN/UPC formats reserve a bit less width for the module because they are longer.
             const barcodeOptions = {
-                format: "CODE128",
-                width: 1.3,
+                format,
+                width: (format === "EAN13" || format === "UPC") ? 1.15 : 1.35,
                 height: 32,
-                displayValue: false,
+                displayValue: false,   // we render the number separately in .barcode-num for tight layout control
                 margin: 0
             };
+
             const rows = area.querySelectorAll('.printRow');
             rows.forEach(row => {
                 row.querySelectorAll('.single-label').forEach(lbl => {
                     lbl.querySelector('.store-name').textContent  = store;
-                    lbl.querySelector('.product').textContent     = product;
-                    lbl.querySelector('.price').textContent       = price;
+
+                    const productEl = lbl.querySelector('.product');
+                    productEl.textContent = product;
+
+                    lbl.querySelector('.net-wt-val').textContent = netWt;
+                    lbl.querySelector('.mrp-val').textContent    = mrp;
+                    lbl.querySelector('.batch-val').textContent  = batch;
+                    lbl.querySelector('.pkd-val').textContent    = pkd;
+                    lbl.querySelector('.bb-val').textContent     = bb;
+
                     lbl.querySelector('.barcode-num').textContent = data;
                     try { JsBarcode(lbl.querySelector('.barcode-svg'), data, barcodeOptions); }
                     catch (e) { console.warn('Barcode error:', e); }
